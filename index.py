@@ -16,7 +16,7 @@ ser=serial.rs485.RS485(port='/dev/ttyAMA0',baudrate=9600)
 ser.rs485_mode = serial.rs485.RS485Settings(False,True)
 
 def temp_acc (tiempo_acc):
-    array = [0x01, 0x06, 0x01, 0x0E, 0x00, 0x64]
+    array = array1
     CRC = hex(test.createcrc(array))
     print(CRC.upper(), "\n")
     array1 = test.createarray(array)

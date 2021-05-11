@@ -88,10 +88,9 @@ class crc16:
         else:
             return 1
 
-'''
+
 test = crc16()
 array = [0x01, 0x06, 0x01, 0x0E, 0x00, 0x64]
 print(hex(test.createcrc(array)).upper(), "\n")
 array1 = test.createarray(array)
 print(array1)
-'''
