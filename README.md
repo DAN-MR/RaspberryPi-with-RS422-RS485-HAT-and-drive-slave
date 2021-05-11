@@ -10,4 +10,4 @@ HARDWARE USED:
 LIBRARIES USED:
 
   CRC16_MODBUS: https://github.com/test65536/untitled/blob/master/crc16_MODBUS.py
-  PROJECT STRUCTURE: https://github.com/markambk/Micropython-RocketLogger
+
