@@ -1,197 +1,70 @@
 import serial
 import serial.rs485
-
 from crc import crc16
 
 
-ser=serial.rs485.RS485(port='/dev/ttyAMA0',baudrate=9600)
+ser=serial.rs485.RS485(port='/dev/ttyAMA0',baudrate=9600,timeout=1)
 ser.rs485_mode = serial.rs485.RS485Settings(False,True)
 
+#    read_Tension_out (coef) = array_funcion = [0x01, 0x03, 0x10, 0x01, 0x00, 0x01] #leer tension
+#    read_current_out (coef) = array_funcion = [0x01, 0x03, 0x10, 0x02, 0x00, 0x01] #leer corriente
+#    read_speed_status_out (coef): array_funcion = [0x01, 0x03, 0x10, 0x05, 0x00, 0x01] #leer velocidad
+#    read_percent_pair_out (coef): array_funcion = [0x01, 0x03, 0x10, 0x06, 0x00, 0x01] #leer par
+#    read_Temp_out (coef): array_funcion = [0x01, 0x03, 0x10, 0x07, 0x00, 0x01] #leer 
+    
+x=[]
+z=[] 
 
-def read_freq_out (coef): 
-    
-    #Array de launcion base leer frecuencia de salida
-    
-    array_funcion = [0x01, 0x03, 0x10, 0x00, 0x00, 0x01]
-       
-    #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final.
-    
-    CRC = crc16().createcrc(array_funcion)
-    
-    CRC_izq = (CRC >> 8)   #CRC bajo (el primero)
-    CRC_der = (CRC & 0xff) #CRC alto (el segundo
-        
-    
-    print(hex(CRC_izq)) 
-    print(hex(CRC_der)) 
-    
-    array_final = array_funcion   #creamos array_final, a partir de array_datos
-    array_final.append(CRC_izq)   #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    array_final.append(CRC_der)   #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.
-    
-    print(array_final)
-    ser.write(array_final)
-    respuesta_drive = ser.read(7)
-    print(respuesta_drive)
-    
-    #comprovación de la respuesta
-    #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final.
-def read_freq_out_drive (coef):
 
-    CRC = crc16().createcrc(respuesta_drive)
+def read_freq_out (coef):                                 #Array de launcion base leer frecuencia de salida    
+    array_funcion = [0x01, 0x03, 0x10, 0x00, 0x00, 0x01]  #Introducion peticion de la palabra de frecuencia 
+    CRC = crc16().createcrc(array_funcion)                #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final. 
+    CRC_izq = (CRC >> 8)                                  #CRC bajo (el primero)
+    CRC_der = (CRC & 0xff)                                #CRC alto (el segundo)   
+    array_final = array_funcion                           #creamos array_final, a partir de array_datos
+    array_final.append(CRC_izq)                           #Aqui añadimos el CRC bajo, al array que acabamos de crear.
+    array_final.append(CRC_der)                           #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.    
+ 
+    ser.write(array_final)                                #Envio al drive del conjunto de la palabra entera con el CRC
     
-    CRC_izq_d = (CRC >> 8)   #CRC bajo (el primero)
-    CRC_der_d = (CRC & 0xff) #CRC alto (el segundo
-    
-    print(hex(CRC_izq_d)) 
-    print(hex(CRC_der))
-    
-    array_drive = respuesta_drive
-    array_drive.append(CRC_izq_d)   #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    array_drive.append(CRC_der_d)   #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.
-    
-    print(array_drive)
-    #ser.write(array_drive)
-    #respuesta_drive = ser.read(7)
-    print(respuesta_drive)
-    
-    
-    
-    
-    
-def read_Tension_out (coef): 
-    
-    #Array de launcion base (en este caso cambiar el tiempo de acceleracion)
-    
-    array_funcion = [0x01, 0x03, 0x10, 0x01, 0x00, 0x01]
-       
-    #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final.
-    
-    CRC = crc16().createcrc(array_funcion)
-    
-    CRC_izq = (CRC >> 8)   #CRC bajo (el primero)
-    CRC_der = (CRC & 0xff) #CRC alto (el segundo
+    #print('mensaje enviado al drive',array_final)
+    try:
+        x= hex(ser.read(7))
+    except:
+        print('no existe comunicacion')
+    except ser.read(0):
+        print('no existe comunicacion')
         
-   # print(hex(CRC_izq)) 
-   # print(hex(CRC_der)) 
+    #x= ser.read(4)
+    #if x[1] == arry_funcion[1]:
+    #print('mensaje devuelto del drive',x)
+    z =[x[0],x[1],x[2],x[3],x[4]]
+    array_funcion_v = z
+    CRC = crc16().createcrc(array_funcion_v)              #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final. 
+    CRC_izq_v = (CRC >> 8)                                #CRC bajo (el primero)
+    CRC_der_v = (CRC & 0xff)                              #CRC alto (el segundo)     
+    y = array_funcion_v                                   #creamos array_final, a partir de array_datos
+    y.append(CRC_izq_v)                                   #Aqui añadimos el CRC bajo, al array que acabamos de crear.
+    y.append(CRC_der_v)                                   #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.    
+    #print('comprobacion mensaje devuelto',y)
     
-    array_final = array_funcion   #creamos array_final, a partir de array_datos
-    array_final.append(CRC_izq) #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    array_final.append(CRC_der) #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.
+    #while [x[5],x[6] == y[5],y[6]]:
+    #print("mensaje ok")
+    m = []
+    m.append(z[0])
+    m.append(z[3])
+    m.append(z[4])
     
+    print("velocidad variador 1",m,"%")
+    #m= hex(z[4])
+    #print("velocidad",m,"%")
+    #else:
+    #print("mensaje no ok")
     
-    #print(array_final)
-    ser.write(array_final)
-    respuesta = ser.read(7)
-    print(respuesta)
 
-def read_current_out (coef): 
+      
     
-    #Array de launcion base (en este caso cambiar el tiempo de acceleracion)
-    
-    array_funcion = [0x01, 0x03, 0x10, 0x02, 0x00, 0x01]
-       
-    #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final.
-    
-    CRC = crc16().createcrc(array_funcion)
-    
-    CRC_izq = (CRC >> 8)   #CRC bajo (el primero)
-    CRC_der = (CRC & 0xff) #CRC alto (el segundo
-        
-    #print(hex(CRC_izq)) 
-    #print(hex(CRC_der)) 
-    
-    array_final = array_funcion   #creamos array_final, a partir de array_datos
-    array_final.append(CRC_izq) #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    array_final.append(CRC_der) #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.
-    
-    
-    #print(array_final)
-    ser.write(array_final)
-    respuesta = ser.read(7)
-    print(respuesta)
-
-def read_speed_status_out (coef): 
-    
-    #Array de launcion base (en este caso cambiar el tiempo de acceleracion)
-    
-    array_funcion = [0x01, 0x03, 0x10, 0x05, 0x00, 0x01]
-       
-    #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final.
-    
-    CRC = crc16().createcrc(array_funcion)
-    
-    CRC_izq = (CRC >> 8)   #CRC bajo (el primero)
-    CRC_der = (CRC & 0xff) #CRC alto (el segundo
-        
-    print(hex(CRC_izq)) 
-    print(hex(CRC_der)) 
-    
-    array_final = array_funcion   #creamos array_final, a partir de array_datos
-    array_final.append(CRC_izq) #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    array_final.append(CRC_der) #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.
-    
-    
-    print(array_final)
-    ser.write(array_final)
-    respuesta = ser.read(7)
-    print(respuesta)
-    
-def read_percent_pair_out (coef): 
-    
-    #Array de launcion base (en este caso cambiar el tiempo de acceleracion)
-    
-    array_funcion = [0x01, 0x03, 0x10, 0x06, 0x00, 0x01]
-       
-    #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final.
-    
-    CRC = crc16().createcrc(array_funcion)
-    
-    CRC_izq = (CRC >> 8)   #CRC bajo (el primero)
-    CRC_der = (CRC & 0xff) #CRC alto (el segundo
-        
-    print(hex(CRC_izq)) 
-    print(hex(CRC_der)) 
-    
-    array_final = array_funcion   #creamos array_final, a partir de array_datos
-    array_final.append(CRC_izq) #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    array_final.append(CRC_der) #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.
-    
-    
-    print(array_final)
-    ser.write(array_final)
-    respuesta = ser.read(7)
-    print(respuesta)
-    
-def read_Temp_out (coef): 
-    
-    #Array de launcion base (en este caso cambiar el tiempo de acceleracion)
-    
-    array_funcion = [0x01, 0x03, 0x10, 0x07, 0x00, 0x01]
-       
-    #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final.
-    
-    CRC = crc16().createcrc(array_funcion)
-    
-    CRC_izq = (CRC >> 8)   #CRC bajo (el primero)
-    CRC_der = (CRC & 0xff) #CRC alto (el segundo
-        
-    print(hex(CRC_izq)) 
-    print(hex(CRC_der)) 
-    
-    array_final = array_funcion   #creamos array_final, a partir de array_datos
-    array_final.append(CRC_izq) #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    array_final.append(CRC_der) #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.
-    
-    
-    print(array_final)
-    ser.write(array_final)
-    respuesta = ser.read(7)
-    print(respuesta)
-    
-    
-    #Parametros de escritura 
-    
+  
     
 def write_temp_acc (coef, tiempo_acc):
     
