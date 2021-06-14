@@ -1,105 +1,49 @@
 import serial
 import serial.rs485
 from crc import crc16
+from listaDeComandos import listaDeComandos
+from datetime import datetime
 
 
 ser=serial.rs485.RS485(port='/dev/ttyAMA0',baudrate=9600,timeout=1)
 ser.rs485_mode = serial.rs485.RS485Settings(False,True)
 
-#    read_Tension_out (coef) = array_funcion = [0x01, 0x03, 0x10, 0x01, 0x00, 0x01] #leer tension
-#    read_current_out (coef) = array_funcion = [0x01, 0x03, 0x10, 0x02, 0x00, 0x01] #leer corriente
-#    read_speed_status_out (coef): array_funcion = [0x01, 0x03, 0x10, 0x05, 0x00, 0x01] #leer velocidad
-#    read_percent_pair_out (coef): array_funcion = [0x01, 0x03, 0x10, 0x06, 0x00, 0x01] #leer par
-#    read_Temp_out (coef): array_funcion = [0x01, 0x03, 0x10, 0x07, 0x00, 0x01] #leer 
-    
-x=[]
-z=[] 
 
-
-def read_freq_out (coef):                                 #Array de launcion base leer frecuencia de salida    
-    array_funcion = [0x01, 0x03, 0x10, 0x00, 0x00, 0x01]  #Introducion peticion de la palabra de frecuencia 
-    CRC = crc16().createcrc(array_funcion)                #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final. 
+def read_parametro(comando):                              #Array de launcion base leer frecuencia de salida
+    array_final = listaDeComandos[comando]["array"]       #creamos array_final, a partir de array_datos
+    CRC = crc16().createcrc(array_final)                  #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final. 
     CRC_izq = (CRC >> 8)                                  #CRC bajo (el primero)
     CRC_der = (CRC & 0xff)                                #CRC alto (el segundo)   
-    array_final = array_funcion                           #creamos array_final, a partir de array_datos
-    array_final.append(CRC_izq)                           #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    array_final.append(CRC_der)                           #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.    
+    array_final.append(CRC_izq)                           #Añadimos CRC bajo, al array que acabamos de crear.
+    array_final.append(CRC_der)                           #Añadimos CRC alto, al array que acabamos de crear, completando el array y la palabra de control.    
  
-    ser.write(array_final)                                #Envio al drive del conjunto de la palabra entera con el CRC
-    
-    #print('mensaje enviado al drive',array_final)
-    try:
-        x= hex(ser.read(7))
-    except:
-        print('no existe comunicacion')
-    except ser.read(0):
-        print('no existe comunicacion')
-        
-    #x= ser.read(4)
-    #if x[1] == arry_funcion[1]:
-    #print('mensaje devuelto del drive',x)
-    z =[x[0],x[1],x[2],x[3],x[4]]
-    array_funcion_v = z
-    CRC = crc16().createcrc(array_funcion_v)              #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final. 
-    CRC_izq_v = (CRC >> 8)                                #CRC bajo (el primero)
-    CRC_der_v = (CRC & 0xff)                              #CRC alto (el segundo)     
-    y = array_funcion_v                                   #creamos array_final, a partir de array_datos
-    y.append(CRC_izq_v)                                   #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    y.append(CRC_der_v)                                   #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.    
-    #print('comprobacion mensaje devuelto',y)
-    
-    #while [x[5],x[6] == y[5],y[6]]:
-    #print("mensaje ok")
-    m = []
-    m.append(z[0])
-    m.append(z[3])
-    m.append(z[4])
-    
-    print("velocidad variador 1",m,"%")
-    #m= hex(z[4])
-    #print("velocidad",m,"%")
-    #else:
-    #print("mensaje no ok")
-    
+    ser.write(array_final)                                #Envio pregunta al Drive
 
-      
-    
-  
-    
-def write_temp_acc (coef, tiempo_acc):
-    
-    #Array de la f  uncion base (en este caso cambiar el tiempo de acceleracion)
-    
-    array_funcion = [0x01, 0x06, 0x01, 0x0E]
-    
-    #Calculamos los datos de "acceleracion" y se añade al array_funcion, conviertendolo en array_datos.
+    x = ser.read(7)                                       # x = datos recibidos
+    if len(x) < 7:                                        #verificación de los datos de lectura recibidos
+        print('error de comunicacion')
+        return False
 
-    dato=int(tiempo_acc * coef) 
-    dato_izq = (dato >> 8)   #dato bajo (el primero)
-    dato_der = (dato & 0xff) #dato alto (el segundo)
-      
-    array_datos = array_funcion  #creamos array_datos, a partir de array_funcion
-    array_datos.append(dato_izq) #Aqui añadimos el dato bajo, al array que acabamos de crear.
-    array_datos.append(dato_der) #Aqui añadimos el dato alto, al array que acabamos de crear, completando el array.
+    array_funcion_v = x[0:5]                                                        #Los datos recibidos del drive, calculamos generando nuevamente el CRC. 
+    CRC = crc16().createcrc(array_funcion_v)                                        #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final. 
+    CRC_izq_v = (CRC >> 8)                                                          #CRC bajo (el primero)
+    CRC_der_v = (CRC & 0xff)                                                        #CRC alto (el segundo)     
+    y = array_funcion_v + CRC_izq_v.to_bytes(1,"big") + CRC_der_v.to_bytes(1,"big") # y = array_final, a partir de array_datos
+                                                                                    #CRC bajo, al array que acabamos de crear.
+                                                                                    #CRC alto, al array que acabamos de crear, completando el array y la palabra de control.    
+    print(f'comprobacion mensaje devuelto:\n{x}\n{y}')
+    
+    if x[5] == y[5] and x[6] == y[6]: print("mensaje ok")
+    parametro = (x[3]*256+x[4]) / listaDeComandos[comando]["factor"]
+    
+    print(f"Variador: {x[0]} - {comando}: {parametro} ")
+    
+    now = datetime.now()  #date and time format: dd/mm/YYYY H:M:S
+    format = "%d/%m/%Y %H:%M:%S"   #format datetime using strftime() 
+    time1 = now.strftime(format)
+    with open("variador.log", "a") as file:
+        file.write(f"{time1} - Variador: {x[0]} - {comando}: {parametro}\n")
+    
+    return True
    
-    #print(array_datos)
-   
-    #Calculamos el CRC de array_datos y se le añade al final, convirtiendolo en array_final.
-    
-    CRC = crc16().createcrc(array_datos)
-    
-    CRC_izq = (CRC >> 8)   #CRC bajo (el primero)
-    CRC_der = (CRC & 0xff) #CRC alto (el segundo
-        
-    #print(CRC_izq) 
-    #print(CRC_der) 
-    
-    array_final = array_datos   #creamos array_final, a partir de array_datos
-    array_final.append(CRC_izq) #Aqui añadimos el CRC bajo, al array que acabamos de crear.
-    array_final.append(CRC_der) #Aqui añadimos el CRC alto, al array que acabamos de crear, completando el array y la palabra de control.
-    
-    
-    #print(array_final)
-    ser.write(array_final)
-    respuesta = ser.read(8)
     
